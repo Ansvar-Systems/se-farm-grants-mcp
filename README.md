@@ -1,27 +1,17 @@
-# Sweden Crop Nutrients MCP
+# Sweden Farm Grants MCP
 
-[![CI](https://github.com/ansvar-systems/se-farm-grants-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/ansvar-systems/se-farm-grants-mcp/actions/workflows/ci.yml)
-[![GHCR](https://github.com/ansvar-systems/se-farm-grants-mcp/actions/workflows/ghcr-build.yml/badge.svg)](https://github.com/ansvar-systems/se-farm-grants-mcp/actions/workflows/ghcr-build.yml)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+Swedish agricultural grants and subsidies: investment support, rural development, environmental investments, and young farmer schemes. Query Swedish farm grant data through the [Model Context Protocol](https://modelcontextprotocol.io).
 
-UK crop nutrient recommendations via the [Model Context Protocol](https://modelcontextprotocol.io). Query AHDB RB209 data, soil types, NPK planning, and commodity prices -- all from your AI assistant.
-
-Part of [Ansvar Open Agriculture](https://ansvar.eu/open-agriculture).
-
-## Why This Exists
-
-Farmers and agronomists need quick access to nutrient recommendation tables, commodity prices, and soil data. This information is published by AHDB and DEFRA but is locked in PDFs, spreadsheets, and web pages that AI assistants cannot query directly. This MCP server makes it all searchable.
+> **Data sources:** Jordbruksverket (Swedish Board of Agriculture), Tillvaxtverket (Swedish Agency for Economic and Regional Growth), Lansstyrelsen (County Administrative Boards). Licensed under applicable Swedish open data terms.
 
 ## Quick Start
 
-### Claude Desktop
-
-Add to `claude_desktop_config.json`:
+### Claude Desktop / Claude Code
 
 ```json
 {
   "mcpServers": {
-    "uk-crop-nutrients": {
+    "se-farm-grants": {
       "command": "npx",
       "args": ["-y", "@ansvar/se-farm-grants-mcp"]
     }
@@ -29,87 +19,45 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-### Claude Code
-
-```bash
-claude mcp add uk-crop-nutrients npx @ansvar/se-farm-grants-mcp
-```
-
-### Streamable HTTP (remote)
+### Streamable HTTP (Docker)
 
 ```
-https://mcp.ansvar.eu/se-crop-nutrients/mcp
+https://mcp.ansvar.eu/se-farm-grants/mcp
 ```
-
-### Docker (self-hosted)
-
-```bash
-docker run -p 3000:3000 ghcr.io/ansvar-systems/se-farm-grants-mcp:latest
-```
-
-### npm (stdio)
-
-```bash
-npx @ansvar/se-farm-grants-mcp
-```
-
-## Example Queries
-
-Ask your AI assistant:
-
-- "What NPK does winter wheat need on heavy clay soil?"
-- "What's the current price of spring barley?"
-- "Calculate gross margin for 8.5 t/ha winter wheat at 520/ha input costs"
-- "What soil group is sandy loam in RB209?"
-- "Search for nitrogen recommendations for oilseed rape"
-
-## Stats
-
-| Metric | Value |
-|--------|-------|
-| Tools | 10 (3 meta + 7 domain) |
-| Jurisdiction | GB |
-| Data sources | AHDB RB209, DEFRA Price Indices, AHDB Market Data |
-| License (data) | Open Government Licence v3 |
-| License (code) | Apache-2.0 |
-| Transport | stdio + Streamable HTTP |
 
 ## Tools
 
 | Tool | Description |
 |------|-------------|
-| `about` | Server metadata and links |
-| `list_sources` | Data sources with freshness info |
-| `check_data_freshness` | Staleness status and refresh command |
-| `search_crop_requirements` | FTS5 search across crop and nutrient data |
-| `get_nutrient_plan` | NPK recommendation for crop + soil type |
-| `get_soil_classification` | Soil group and characteristics |
-| `list_crops` | All crops, optionally by group |
-| `get_crop_details` | Full crop profile with nutrient offtake |
-| `get_commodity_price` | Latest price with source attribution |
-| `calculate_margin` | Gross margin estimate |
+| `about` | Get server metadata: name, version, coverage, data sources, and links. |
+| `list_sources` | List all data sources with authority, URL, license, and freshness info. |
+| `check_data_freshness` | Check when data was last ingested, staleness status, and how to trigger a refresh. |
+| `search_grants` | Search Swedish farm grants and subsidies by keyword, grant type, or minimum value. |
+| `get_grant_details` | Get full details for a specific grant: eligibility, items, application steps, stacking rules. |
+| `check_deadlines` | List grant deadlines: open, rolling, closed, and upcoming. Sorted by closing date. |
+| `get_eligible_items` | List eligible cost items for a grant, optionally filtered by category. |
+| `check_stacking` | Check if multiple grants can be combined (stacked) with compatibility conditions. |
+| `get_application_process` | Get step-by-step application guidance: what to prepare, evidence needed, which portal. |
+| `estimate_grant_value` | Estimate grant payout for specific items and area, applying match funding and caps. |
 
-See [TOOLS.md](TOOLS.md) for full parameter documentation.
+## Example Queries
 
-## Security Scanning
+- "Vilka stod kan jag soka for investeringar i jordbruket?" (What grants can I apply for regarding farm investments?)
+- "What are the deadlines for Jordbruksverket investment support?"
+- "Kan jag kombinera miljoersattning med investeringsstod?" (Can I combine environmental payments with investment support?)
+- "How much grant can I get for a new livestock building?"
 
-This repository runs 6 security checks on every push:
+## Stats
 
-- **CodeQL** -- static analysis for JavaScript/TypeScript
-- **Gitleaks** -- secret detection across full history
-- **Dependency review** -- via Dependabot
-- **Container scanning** -- via GHCR build pipeline
+| Metric | Value |
+|--------|-------|
+| Jurisdiction | SE (Sweden) |
+| Tools | 10 |
+| Transport | stdio + Streamable HTTP |
+| License | Apache-2.0 |
 
-See [SECURITY.md](SECURITY.md) for reporting policy.
+## Links
 
-## Disclaimer
-
-This tool provides reference data for informational purposes only. It is not professional agricultural advice. See [DISCLAIMER.md](DISCLAIMER.md).
-
-## Contributing
-
-Issues and pull requests welcome. For security vulnerabilities, email security@ansvar.eu (do not open a public issue).
-
-## License
-
-Apache-2.0. Data sourced under Open Government Licence v3.
+- [Ansvar MCP Network](https://ansvar.eu/open-agriculture)
+- [GitHub](https://github.com/ansvar-systems/se-farm-grants-mcp)
+- [All Swedish Agriculture MCPs](https://mcp.ansvar.eu)
