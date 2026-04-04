@@ -8,23 +8,23 @@ import { writeFileSync } from 'fs';
 
 const db = createDatabase();
 
-const crops = db.get<{ c: number }>('SELECT count(*) as c FROM crops')!.c;
-const soils = db.get<{ c: number }>('SELECT count(*) as c FROM soil_types')!.c;
-const recs = db.get<{ c: number }>('SELECT count(*) as c FROM nutrient_recommendations')!.c;
-const prices = db.get<{ c: number }>('SELECT count(*) as c FROM commodity_prices')!.c;
+const grants = db.get<{ c: number }>('SELECT count(*) as c FROM grants')!.c;
+const items = db.get<{ c: number }>('SELECT count(*) as c FROM grant_items')!.c;
+const stacking = db.get<{ c: number }>('SELECT count(*) as c FROM stacking_rules')!.c;
+const guidance = db.get<{ c: number }>('SELECT count(*) as c FROM application_guidance')!.c;
 const fts = db.get<{ c: number }>('SELECT count(*) as c FROM search_index')!.c;
 const lastIngest = db.get<{ value: string }>('SELECT value FROM db_metadata WHERE key = ?', ['last_ingest']);
 
 db.close();
 
 const coverage = {
-  mcp_name: 'UK Crop Nutrients MCP',
-  jurisdiction: 'GB',
+  mcp_name: 'Sweden Farm Grants MCP',
+  jurisdiction: 'SE',
   build_date: lastIngest?.value ?? new Date().toISOString().split('T')[0],
-  crops,
-  soil_types: soils,
-  nutrient_recommendations: recs,
-  commodity_prices: prices,
+  grants,
+  grant_items: items,
+  stacking_rules: stacking,
+  application_guidance_steps: guidance,
   fts_entries: fts,
 };
 

@@ -11,13 +11,13 @@ import { createDatabase, type Database } from './db.js';
 import { handleAbout } from './tools/about.js';
 import { handleListSources } from './tools/list-sources.js';
 import { handleCheckFreshness } from './tools/check-freshness.js';
-import { handleSearchCropRequirements } from './tools/search-crop-requirements.js';
-import { handleGetNutrientPlan } from './tools/get-nutrient-plan.js';
-import { handleGetSoilClassification } from './tools/get-soil-classification.js';
-import { handleListCrops } from './tools/list-crops.js';
-import { handleGetCropDetails } from './tools/get-crop-details.js';
-import { handleGetCommodityPrice } from './tools/get-commodity-price.js';
-import { handleCalculateMargin } from './tools/calculate-margin.js';
+import { handleSearchGrants } from './tools/search-grants.js';
+import { handleGetGrantDetails } from './tools/get-grant-details.js';
+import { handleCheckDeadlines } from './tools/check-deadlines.js';
+import { handleGetEligibleItems } from './tools/get-eligible-items.js';
+import { handleCheckStacking } from './tools/check-stacking.js';
+import { handleGetApplicationProcess } from './tools/get-application-process.js';
+import { handleEstimateGrantValue } from './tools/estimate-grant-value.js';
 
 const SERVER_NAME = 'se-farm-grants-mcp';
 const SERVER_VERSION = '0.1.0';
@@ -25,46 +25,42 @@ const PORT = parseInt(process.env.PORT ?? '3000', 10);
 
 const SearchArgsSchema = z.object({
   query: z.string(),
-  crop_group: z.string().optional(),
+  grant_type: z.string().optional(),
+  min_value: z.number().optional(),
   jurisdiction: z.string().optional(),
   limit: z.number().optional(),
 });
 
-const NutrientPlanArgsSchema = z.object({
-  crop: z.string(),
-  soil_type: z.string(),
-  sns_index: z.number().optional(),
-  previous_crop: z.string().optional(),
+const GrantDetailsArgsSchema = z.object({
+  grant_id: z.string(),
   jurisdiction: z.string().optional(),
 });
 
-const SoilArgsSchema = z.object({
-  soil_type: z.string().optional(),
-  texture: z.string().optional(),
+const DeadlinesArgsSchema = z.object({
+  grant_type: z.string().optional(),
   jurisdiction: z.string().optional(),
 });
 
-const ListCropsArgsSchema = z.object({
-  crop_group: z.string().optional(),
+const EligibleItemsArgsSchema = z.object({
+  grant_id: z.string(),
+  category: z.string().optional(),
   jurisdiction: z.string().optional(),
 });
 
-const CropDetailsArgsSchema = z.object({
-  crop: z.string(),
+const StackingArgsSchema = z.object({
+  grant_ids: z.array(z.string()),
   jurisdiction: z.string().optional(),
 });
 
-const PriceArgsSchema = z.object({
-  crop: z.string(),
-  market: z.string().optional(),
+const ApplicationProcessArgsSchema = z.object({
+  grant_id: z.string(),
   jurisdiction: z.string().optional(),
 });
 
-const MarginArgsSchema = z.object({
-  crop: z.string(),
-  yield_t_ha: z.number(),
-  price_per_tonne: z.number().optional(),
-  input_costs: z.number().optional(),
+const EstimateValueArgsSchema = z.object({
+  grant_id: z.string(),
+  items: z.array(z.string()).optional(),
+  area_ha: z.number().optional(),
   jurisdiction: z.string().optional(),
 });
 
@@ -85,95 +81,100 @@ const TOOLS = [
     inputSchema: { type: 'object' as const, properties: {} },
   },
   {
-    name: 'search_crop_requirements',
-    description: 'Search crop nutrient requirements, soil data, and recommendations. Use for broad queries about crops and nutrients.',
+    name: 'search_grants',
+    description: 'Search Swedish farm grants and subsidies by keyword, grant type, or minimum value. Returns matching grants with eligibility and status.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        query: { type: 'string', description: 'Free-text search query' },
-        crop_group: { type: 'string', description: 'Filter by crop group (e.g. cereals, oilseeds)' },
-        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: GB)' },
+        query: { type: 'string', description: 'Free-text search query (e.g. "stallbyggnad", "solenergi", "ung lantbrukare")' },
+        grant_type: { type: 'string', description: 'Filter by type: capital, young_farmer, competitive, infrastructure, revenue, environmental' },
+        min_value: { type: 'number', description: 'Minimum grant value in SEK' },
+        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: SE)' },
         limit: { type: 'number', description: 'Max results (default: 20, max: 50)' },
       },
       required: ['query'],
     },
   },
   {
-    name: 'get_nutrient_plan',
-    description: 'Get NPK fertiliser recommendation for a specific crop and soil type. Based on AHDB RB209.',
+    name: 'get_grant_details',
+    description: 'Get full details for a specific grant: description, eligibility, eligible items, application steps, and stacking rules.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        crop: { type: 'string', description: 'Crop ID or name (e.g. winter-wheat)' },
-        soil_type: { type: 'string', description: 'Soil type ID or name (e.g. heavy-clay)' },
-        sns_index: { type: 'number', description: 'Soil Nitrogen Supply index (0-6)' },
-        previous_crop: { type: 'string', description: 'Previous crop group for rotation adjustment' },
-        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: GB)' },
+        grant_id: { type: 'string', description: 'Grant ID (e.g. "investeringsstod-stallbyggnader")' },
+        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: SE)' },
       },
-      required: ['crop', 'soil_type'],
+      required: ['grant_id'],
     },
   },
   {
-    name: 'get_soil_classification',
-    description: 'Get soil group, characteristics, and drainage class for a soil type or texture.',
+    name: 'check_deadlines',
+    description: 'List grant deadlines: open with deadline, rolling/continuous, closed, and upcoming. Sorted by closing date.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        soil_type: { type: 'string', description: 'Soil type ID or name' },
-        texture: { type: 'string', description: 'Soil texture (e.g. clay, sand, loam)' },
-        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: GB)' },
+        grant_type: { type: 'string', description: 'Filter by type: capital, young_farmer, competitive, infrastructure, revenue, environmental' },
+        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: SE)' },
       },
     },
   },
   {
-    name: 'list_crops',
-    description: 'List all crops in the database, optionally filtered by crop group.',
+    name: 'get_eligible_items',
+    description: 'List eligible cost items for a grant, optionally filtered by category. Shows per-item values and specifications.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        crop_group: { type: 'string', description: 'Filter by crop group (e.g. cereals)' },
-        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: GB)' },
+        grant_id: { type: 'string', description: 'Grant ID' },
+        category: { type: 'string', description: 'Filter by item category (e.g. "building", "equipment", "energy")' },
+        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: SE)' },
       },
+      required: ['grant_id'],
     },
   },
   {
-    name: 'get_crop_details',
-    description: 'Get full profile for a crop: nutrient offtake, typical yields, growth stages.',
+    name: 'check_stacking',
+    description: 'Check if multiple grants can be combined (stacked). Returns compatibility for each pair with conditions.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        crop: { type: 'string', description: 'Crop ID or name' },
-        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: GB)' },
+        grant_ids: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of grant IDs to check compatibility (minimum 2)',
+        },
+        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: SE)' },
       },
-      required: ['crop'],
+      required: ['grant_ids'],
     },
   },
   {
-    name: 'get_commodity_price',
-    description: 'Get latest commodity price for a crop with source attribution. Warns if data is stale (>14 days).',
+    name: 'get_application_process',
+    description: 'Get step-by-step application guidance for a grant: what to prepare, evidence needed, which portal to use.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        crop: { type: 'string', description: 'Crop ID or name' },
-        market: { type: 'string', description: 'Market type (e.g. ex-farm, delivered)' },
-        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: GB)' },
+        grant_id: { type: 'string', description: 'Grant ID' },
+        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: SE)' },
       },
-      required: ['crop'],
+      required: ['grant_id'],
     },
   },
   {
-    name: 'calculate_margin',
-    description: 'Estimate gross margin for a crop. Uses current commodity price if price_per_tonne not provided.',
+    name: 'estimate_grant_value',
+    description: 'Estimate grant payout for specific items and/or area. Applies match funding percentage and max caps.',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        crop: { type: 'string', description: 'Crop ID or name' },
-        yield_t_ha: { type: 'number', description: 'Expected yield in tonnes per hectare' },
-        price_per_tonne: { type: 'number', description: 'Override price (GBP/t). If omitted, uses latest market price.' },
-        input_costs: { type: 'number', description: 'Total input costs per hectare (GBP). Default: 0' },
-        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: GB)' },
+        grant_id: { type: 'string', description: 'Grant ID' },
+        items: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Array of grant item IDs to include in estimate',
+        },
+        area_ha: { type: 'number', description: 'Farm area in hectares (for per-hectare items)' },
+        jurisdiction: { type: 'string', description: 'ISO 3166-1 alpha-2 code (default: SE)' },
       },
-      required: ['crop', 'yield_t_ha'],
+      required: ['grant_id'],
     },
   },
 ];
@@ -200,20 +201,20 @@ function registerTools(server: Server, db: Database): void {
           return textResult(handleListSources(db));
         case 'check_data_freshness':
           return textResult(handleCheckFreshness(db));
-        case 'search_crop_requirements':
-          return textResult(handleSearchCropRequirements(db, SearchArgsSchema.parse(args)));
-        case 'get_nutrient_plan':
-          return textResult(handleGetNutrientPlan(db, NutrientPlanArgsSchema.parse(args)));
-        case 'get_soil_classification':
-          return textResult(handleGetSoilClassification(db, SoilArgsSchema.parse(args)));
-        case 'list_crops':
-          return textResult(handleListCrops(db, ListCropsArgsSchema.parse(args)));
-        case 'get_crop_details':
-          return textResult(handleGetCropDetails(db, CropDetailsArgsSchema.parse(args)));
-        case 'get_commodity_price':
-          return textResult(handleGetCommodityPrice(db, PriceArgsSchema.parse(args)));
-        case 'calculate_margin':
-          return textResult(handleCalculateMargin(db, MarginArgsSchema.parse(args)));
+        case 'search_grants':
+          return textResult(handleSearchGrants(db, SearchArgsSchema.parse(args)));
+        case 'get_grant_details':
+          return textResult(handleGetGrantDetails(db, GrantDetailsArgsSchema.parse(args)));
+        case 'check_deadlines':
+          return textResult(handleCheckDeadlines(db, DeadlinesArgsSchema.parse(args)));
+        case 'get_eligible_items':
+          return textResult(handleGetEligibleItems(db, EligibleItemsArgsSchema.parse(args)));
+        case 'check_stacking':
+          return textResult(handleCheckStacking(db, StackingArgsSchema.parse(args)));
+        case 'get_application_process':
+          return textResult(handleGetApplicationProcess(db, ApplicationProcessArgsSchema.parse(args)));
+        case 'estimate_grant_value':
+          return textResult(handleEstimateGrantValue(db, EstimateValueArgsSchema.parse(args)));
         default:
           return errorResult(`Unknown tool: ${name}`);
       }

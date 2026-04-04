@@ -1,0 +1,10 @@
+{
+  "mcp_name": "Sweden Farm Grants MCP",
+  "jurisdiction": "SE",
+  "build_date": "2026-04-04",
+  "grants": 12,
+  "grant_items": 23,
+  "stacking_rules": 19,
+  "application_guidance_steps": 60,
+  "fts_entries": 35
+}
