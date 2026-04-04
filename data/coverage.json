@@ -2,9 +2,27 @@
   "mcp_name": "Sweden Farm Grants MCP",
   "jurisdiction": "SE",
   "build_date": "2026-04-04",
-  "grants": 12,
-  "grant_items": 23,
-  "stacking_rules": 19,
-  "application_guidance_steps": 60,
-  "fts_entries": 35
+  "grants": 28,
+  "grant_items": 49,
+  "stacking_rules": 47,
+  "application_guidance_steps": 98,
+  "fts_entries": 77,
+  "sources": [
+    "jordbruksverket.se — Strategiska planen 2023-2027",
+    "jordbruksverket.se — Investeringsstod for jordbruk, tradgard och rennaring",
+    "jordbruksverket.se — Kvaveklivet",
+    "jordbruksverket.se — Robust primarproduktion",
+    "jordbruksverket.se — Foradling av jordbruksprodukter 2024-2027",
+    "jordbruksverket.se — Startstod / Stod till unga jordbrukare",
+    "jordbruksverket.se — Ersattning for ekologisk produktion",
+    "jordbruksverket.se — Djurvalfardsersattning mjolkkor / far",
+    "jordbruksverket.se — Miljoersattning vallodling / betesmarker",
+    "jordbruksverket.se — Vattenvardsatgarder / tvastegsdiken / vatmarker",
+    "jordbruksverket.se — EIP-Agri innovationsprojekt",
+    "jordbruksverket.se — Leader 2023-2027",
+    "jordbruksverket.se — Kompetensutveckling",
+    "pts.se — Bredbandsstod 2024-2027",
+    "tillvaxtverket.se — Landsbygdsprogram / service i landsbygder",
+    "lansstyrelsen.se — Regionala investeringsstod"
+  ]
 }
