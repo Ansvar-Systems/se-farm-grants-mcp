@@ -8,7 +8,7 @@ Get server metadata: name, version, coverage, data sources, and links.
 
 **Parameters:** None
 
-**Returns:** Server name, version, jurisdiction list, data source names, tool count, homepage/repository links.
+**Returns:** Server name, version, jurisdiction list, data source names (3 sources), tool count, homepage/repository links.
 
 ---
 
@@ -18,7 +18,7 @@ List all data sources with authority, URL, license, and freshness info.
 
 **Parameters:** None
 
-**Returns:** Array of data sources, each with `name`, `authority`, `official_url`, `retrieval_method`, `update_frequency`, `license`, `coverage`, `last_retrieved`.
+**Returns:** Array of 3 sources (Jordbruksverket, Tillvaxtverket, Lansstyrelsen), each with `name`, `authority`, `official_url`, `retrieval_method`, `update_frequency`, `license`, `coverage`, `last_retrieved`.
 
 ---
 
@@ -28,109 +28,117 @@ Check when data was last ingested, staleness status, and how to trigger a refres
 
 **Parameters:** None
 
-**Returns:** `status` (fresh/stale/unknown), `last_ingest`, `days_since_ingest`, `staleness_threshold_days`, `refresh_command`.
+**Returns:** `status` (fresh/stale/unknown), `last_ingest`, `build_date`, `schema_version`, `days_since_ingest`, `staleness_threshold_days` (90), `refresh_command`.
 
 ---
 
 ## Domain Tools
 
-### `search_crop_requirements`
+### `search_grants`
 
-Search crop nutrient requirements, soil data, and recommendations. Use for broad queries about crops and nutrients.
+Search grant schemes by name, description, or type. Uses tiered FTS5 search.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `query` | string | Yes | Free-text search query |
-| `crop_group` | string | No | Filter by crop group (e.g. cereals, oilseeds) |
-| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: GB) |
+| `grant_type` | string | No | Filter by grant type |
+| `min_value` | number | No | Minimum grant value (SEK) |
+| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: SE) |
 | `limit` | number | No | Max results (default: 20, max: 50) |
 
-**Example:** `{ "query": "nitrogen winter wheat clay" }`
+**Returns:** `results` array of matching grants with full grant details, `total` count, `search_tier`.
+
+**Example:** `{ "query": "investeringsstod djurhallning" }`
 
 ---
 
-### `get_nutrient_plan`
+### `get_grant_details`
 
-Get NPK fertiliser recommendation for a specific crop and soil type. Based on AHDB RB209.
+Get full details for a specific grant including eligible items, application steps, and stacking rules.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `crop` | string | Yes | Crop ID or name (e.g. winter-wheat) |
-| `soil_type` | string | Yes | Soil type ID or name (e.g. heavy-clay) |
-| `sns_index` | number | No | Soil Nitrogen Supply index (0-6) |
-| `previous_crop` | string | No | Previous crop group for rotation adjustment |
-| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: GB) |
+| `grant_id` | string | Yes | Grant ID (from search results) |
+| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: SE) |
 
-**Returns:** NPK recommendation in kg/ha with RB209 section reference.
+**Returns:** `grant` object with all fields, `eligible_items` array, `eligible_items_count`, `application_steps` array, `stacking_rules` array with other grant compatibility.
 
-**Example:** `{ "crop": "winter-wheat", "soil_type": "heavy-clay", "sns_index": 2 }`
+**Example:** `{ "grant_id": "inv-001" }`
 
 ---
 
-### `get_soil_classification`
+### `check_deadlines`
 
-Get soil group, characteristics, and drainage class for a soil type or texture.
+Check grant deadlines, categorised by status: open with deadline, open rolling, closed, upcoming.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `soil_type` | string | No | Soil type ID or name |
-| `texture` | string | No | Soil texture (e.g. clay, sand, loam) |
-| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: GB) |
+| `grant_type` | string | No | Filter by grant type |
+| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: SE) |
 
-**Returns:** Soil group number, texture, drainage class, description. If no parameters given, returns all soil types.
+**Returns:** Categorised object with `open_with_deadline`, `open_rolling`, `closed`, `upcoming` arrays. Each entry includes `days_until_close` where applicable.
+
+**Example:** `{ "grant_type": "investment" }`
 
 ---
 
-### `list_crops`
+### `get_eligible_items`
 
-List all crops in the database, optionally filtered by crop group.
+Get eligible items for a specific grant, optionally filtered by category.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `crop_group` | string | No | Filter by crop group (e.g. cereals) |
-| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: GB) |
+| `grant_id` | string | Yes | Grant ID |
+| `category` | string | No | Filter by item category |
+| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: SE) |
+
+**Returns:** `grant_name`, `items` array with item details, `total` count, `categories` list.
+
+**Example:** `{ "grant_id": "inv-001", "category": "buildings" }`
 
 ---
 
-### `get_crop_details`
+### `check_stacking`
 
-Get full profile for a crop: nutrient offtake, typical yields, growth stages.
+Check compatibility between two or more grants (can they be combined?).
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `crop` | string | Yes | Crop ID or name |
-| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: GB) |
+| `grant_ids` | string[] | Yes | Array of 2+ grant IDs to check |
+| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: SE) |
 
-**Returns:** Crop group, typical yield (t/ha), nutrient offtake (N, P2O5, K2O in kg/ha), growth stages.
+**Returns:** Array of pairwise checks with `grant_a`, `grant_b`, names, `compatible` (boolean or null if no rule), `conditions`, `rule_found`.
+
+**Example:** `{ "grant_ids": ["inv-001", "env-002"] }`
 
 ---
 
-### `get_commodity_price`
+### `get_application_process`
 
-Get latest commodity price for a crop with source attribution. Warns if data is stale (>14 days).
+Get step-by-step application process for a specific grant.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `crop` | string | Yes | Crop ID or name |
-| `market` | string | No | Market type (e.g. ex-farm, delivered) |
-| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: GB) |
+| `grant_id` | string | Yes | Grant ID |
+| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: SE) |
 
-**Returns:** Price per tonne (GBP), market, source attribution, published date. Includes `staleness_warning` if >14 days old.
+**Returns:** `grant_name`, `authority`, `steps` array with `step_order`, `description`, `evidence_required`, `portal`, `total_steps`, `primary_portal` URL.
+
+**Example:** `{ "grant_id": "inv-001" }`
 
 ---
 
-### `calculate_margin`
+### `estimate_grant_value`
 
-Estimate gross margin for a crop. Uses current commodity price if price_per_tonne not provided.
+Estimate grant value based on selected items, area, and match funding percentage.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `crop` | string | Yes | Crop ID or name |
-| `yield_t_ha` | number | Yes | Expected yield in tonnes per hectare |
-| `price_per_tonne` | number | No | Override price (GBP/t). If omitted, uses latest market price |
-| `input_costs` | number | No | Total input costs per hectare (GBP). Default: 0 |
-| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: GB) |
+| `grant_id` | string | Yes | Grant ID |
+| `items` | string[] | No | Array of item IDs to include in estimate |
+| `area_ha` | number | No | Area in hectares (for per-ha calculations) |
+| `jurisdiction` | string | No | ISO 3166-1 alpha-2 code (default: SE) |
 
-**Returns:** Revenue/ha, input costs/ha, gross margin/ha, price source.
+**Returns:** Grant details, `match_funding_pct`, `max_grant_value`, `item_breakdown` with per-item values, `items_total`, estimated grant value (capped at maximum).
 
-**Example:** `{ "crop": "winter-wheat", "yield_t_ha": 8.5, "input_costs": 520 }`
+**Example:** `{ "grant_id": "inv-001", "items": ["item-001", "item-002"], "area_ha": 50 }`
