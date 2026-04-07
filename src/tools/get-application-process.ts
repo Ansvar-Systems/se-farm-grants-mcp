@@ -1,3 +1,4 @@
+import { buildCitation } from '../citation.js';
 import { buildMeta } from '../metadata.js';
 import { validateJurisdiction } from '../jurisdiction.js';
 import type { Database } from '../db.js';
@@ -41,6 +42,7 @@ export function handleGetApplicationProcess(db: Database, args: GetApplicationPr
     steps,
     total_steps: steps.length,
     primary_portal: steps.find(s => s.portal)?.portal ?? 'https://jordbruksverket.se/e-tjanster',
+    _citation: buildCitation(`SE application process — ${args.grant_id ?? ''}`, `application process (${args.grant_id ?? ''})`, 'get_application_process', { grant_id: String(args.grant_id ?? '') }),
     _meta: buildMeta(),
   };
 }
