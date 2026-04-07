@@ -1,3 +1,4 @@
+import { buildCitation } from '../citation.js';
 import { buildMeta } from '../metadata.js';
 import { validateJurisdiction } from '../jurisdiction.js';
 import type { Database } from '../db.js';
@@ -51,6 +52,7 @@ export function handleGetGrantDetails(db: Database, args: GetGrantDetailsArgs) {
     eligible_items_count: items.length,
     application_steps: guidance,
     stacking_rules: stacking,
+    _citation: buildCitation(`SE grant details — ${args.grant_id ?? ''}`, `grant details (${args.grant_id ?? ''})`, 'get_grant_details', { grant_id: String(args.grant_id ?? '') }),
     _meta: buildMeta(),
   };
 }

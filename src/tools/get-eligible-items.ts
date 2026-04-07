@@ -1,3 +1,4 @@
+import { buildCitation } from '../citation.js';
 import { buildMeta } from '../metadata.js';
 import { validateJurisdiction } from '../jurisdiction.js';
 import type { Database } from '../db.js';
@@ -50,6 +51,7 @@ export function handleGetEligibleItems(db: Database, args: GetEligibleItemsArgs)
     items,
     total: items.length,
     categories: categories.map(c => c.category),
+    _citation: buildCitation(`SE eligible items — ${args.grant_id ?? ''}`, `eligible items (${args.grant_id ?? ''})`, 'get_eligible_items', { grant_id: String(args.grant_id ?? '') }),
     _meta: buildMeta(),
   };
 }
